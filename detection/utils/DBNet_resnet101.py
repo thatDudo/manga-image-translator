@@ -1,12 +1,12 @@
 
+import einops
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from torchvision.models import resnet101
 
-import DBHead
-import einops
+from . import DBHead as DBHead
 
 class ImageMultiheadSelfAttention(nn.Module) :
 	def __init__(self, planes):

@@ -1,12 +1,3 @@
-# import json
-# import os.path as osp
-# from tqdm import tqdm
-# import numpy as np
-# import cv2
-# import torch
-# from pathlib import Path
-# import torch
-# from typing import Union
 from .basemodel import TextDetBase, TextDetBaseDNN
 from .utils.yolov5_utils import non_max_suppression
 from .utils.db_utils import SegDetectorRepresenter

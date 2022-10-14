@@ -52,7 +52,7 @@ def load_model(dictionary, cuda: bool, model_name: str = '32px') :
 			model = model.cuda()
 		MODEL_48PX_CTC = model
 
-def ocr_infer_bacth(img, model, widths) :
+def ocr_infer_batch(img, model, widths) :
 	with torch.no_grad() :
 		return model.infer_beam_batch(img, widths, beams_k = 5, max_seq_length = 255)
 
@@ -90,7 +90,7 @@ def run_ocr_32px(img: np.ndarray, cuda: bool, quadrilaterals: List[Tuple[Union[Q
 		images = einops.rearrange(images, 'N H W C -> N C H W')
 		if cuda :
 			images = images.cuda()
-		ret = ocr_infer_bacth(images, MODEL_32PX, widths)
+		ret = ocr_infer_batch(images, MODEL_32PX, widths)
 		for i, (pred_chars_index, prob, fr, fg, fb, br, bg, bb) in enumerate(ret) :
 			if prob < 0.7 :
 				continue

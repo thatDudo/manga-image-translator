@@ -107,8 +107,6 @@ async def infer(
 		update_state(task_id, nonce, 'detection')
 
 	raw_mask, final_mask, textlines = await dispatch_detection(detector, img, img_detect_size, args.use_cuda, args, verbose = args.verbose)
-	if detector == 'ctd':
-		text_regions = textlines
 
 	if args.verbose :
 		if detector == 'ctd' :
@@ -126,7 +124,9 @@ async def infer(
 		update_state(task_id, nonce, 'ocr')
 	textlines = await dispatch_ocr(img, textlines, args.use_cuda, args, model_name = args.ocr_model, verbose = args.verbose)
 
-	if detector == 'default' :
+	if detector == 'ctd':
+		text_regions = textlines
+	elif detector == 'default' :
 		text_regions, textlines = await dispatch_textline_merge(textlines, img.shape[1], img.shape[0], verbose = args.verbose)
 		if args.verbose :
 			img_bbox = np.copy(img)

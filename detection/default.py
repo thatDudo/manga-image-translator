@@ -1,18 +1,15 @@
 import torch
 import cv2
-from typing import List
 import numpy as np
+
 from utils import Quadrilateral
-from .DBNet_resnet34 import TextDetection as TextDetectionDefault
-from . import imgproc, dbnet_utils, craft_utils
 import einops
+from .utils import dbnet_utils, craft_utils, imgproc
+from .utils.DBNet_resnet34 import TextDetection as TextDetectionDefault
 from .common import CommonDetector
 
 class DefaultDetector(CommonDetector):
 	_MODEL_FILE = 'detect.ckpt'
-
-	def __init__(self, use_cuda):
-		super().__init__(use_cuda)
 
 	def _load_model(self):
 		if not self.is_model_loaded():
