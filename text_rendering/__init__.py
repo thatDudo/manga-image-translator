@@ -3,9 +3,7 @@ from typing import List, Union
 from utils import Quadrilateral
 import numpy as np
 import cv2
-import math
 from utils import findNextPowerOf2
-import textwrap
 from . import text_render
 from .text_render_eng import render_textblock_list_eng
 from detection.textblockdetector.textblock import TextBlock

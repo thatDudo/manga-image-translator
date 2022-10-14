@@ -3,7 +3,7 @@ import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from typing import List, Union, Tuple
 
-from detection.textblockdetector import TextBlock
+from detection.textblockdetector.textblock import TextBlock
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
