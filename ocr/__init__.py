@@ -13,7 +13,7 @@ import networkx as nx
 from .model_32px import OCR as OCR_32px
 from .model_48px import OCR as OCR_48px
 from .model_48px_ctc import OCR as OCR_48px_ctc
-from textblockdetector.textblock import TextBlock
+from detection.textblockdetector.textblock import TextBlock
 
 MODEL_32PX = None
 MODEL_48PX = None

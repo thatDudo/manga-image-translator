@@ -8,7 +8,7 @@ from utils import findNextPowerOf2
 import textwrap
 from . import text_render
 from .text_render_eng import render_textblock_list_eng
-from textblockdetector.textblock import TextBlock
+from detection.textblockdetector.textblock import TextBlock
 
 def fg_bg_compare(fg, bg):
 	fg_avg = np.mean(fg)

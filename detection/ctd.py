@@ -1,19 +1,18 @@
-import json
-from .basemodel import TextDetBase, TextDetBaseDNN
-import os.path as osp
-from tqdm import tqdm
 import numpy as np
 import cv2
 import torch
 from pathlib import Path
 import torch
 from typing import Union
-from .utils.yolov5_utils import non_max_suppression
-from .utils.db_utils import SegDetectorRepresenter
-from .utils.io_utils import imread, imwrite, find_all_imgs, NumpyEncoder
-from .utils.imgproc_utils import letterbox, xyxy2yolo, get_yololabel_strings
-from .textblock import TextBlock, group_output
-from .textmask import refine_mask, refine_undetected_mask, REFINEMASK_INPAINT, REFINEMASK_ANNOTATION
+
+from .textblockdetector.basemodel import TextDetBase, TextDetBaseDNN
+from .textblockdetector.utils.yolov5_utils import non_max_suppression
+from .textblockdetector.utils.db_utils import SegDetectorRepresenter
+from .textblockdetector.utils.imgproc_utils import letterbox
+from .textblockdetector.textblock import group_output
+from .textblockdetector.textmask import refine_mask, refine_undetected_mask, REFINEMASK_INPAINT
+
+from .common import CommonDetector
 
 def preprocess_img(img, input_size=(1024, 1024), device='cpu', bgr2rgb=True, half=False, to_tensor=True):
     if bgr2rgb:
@@ -59,33 +58,44 @@ def postprocess_yolo(det, conf_thresh, nms_thresh, resize_ratio, sort_func=None)
     cls = det[..., 5].astype(np.int32)
     return blines, cls, confs
 
-class TextDetector:
+class ComicTextDetector(CommonDetector):
     lang_list = ['eng', 'ja', 'unknown']
     langcls2idx = {'eng': 0, 'ja': 1, 'unknown': 2}
 
-    def __init__(self, model_path, input_size=1024, device='cpu', half=False, nms_thresh=0.35, conf_thresh=0.4, mask_thresh=0.3, act='leaky'):
-        super(TextDetector, self).__init__()
-        cuda = device == 'cuda'
+    def __init__(self, use_cuda: bool):
+        super().__init__(use_cuda)
+        if self._use_cuda:
+            self.device = 'cuda'
+            self._MODEL_FILE = 'comictextdetector.pt'
+        else:
+            self.device = 'cpu'
+            self._MODEL_FILE = 'comictextdetector.pt.onnx'
 
-        if Path(model_path).suffix == '.onnx':
+    def _load_model(self, input_size=1024, half=False, nms_thresh=0.35, conf_thresh=0.4, mask_thresh=0.3, act='leaky'):
+        model_path = self._get_model_path()
+
+        if Path(self._get_model_path()).suffix == '.onnx':
             self.model = cv2.dnn.readNetFromONNX(model_path)
             self.net = TextDetBaseDNN(input_size, model_path)
             self.backend = 'opencv'
         else:
-            self.net = TextDetBase(model_path, device=device, act=act)
+            self.net = TextDetBase(model_path, device=self.device, act=act)
             self.backend = 'torch'
-        
+        if self._use_cuda:
+            self.net.cuda()
         if isinstance(input_size, int):
             input_size = (input_size, input_size)
         self.input_size = input_size
-        self.device = device
         self.half = half
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
         self.seg_rep = SegDetectorRepresenter(thresh=0.3)
 
+    async def detect(self, img: np.ndarray, detect_size: int, args: dict, verbose: bool):
+        return self._detect(img, refine_mode=REFINEMASK_INPAINT, keep_undetected_mask=False, bgr2rgb=False)
+
     @torch.no_grad()
-    def __call__(self, img, refine_mode=REFINEMASK_INPAINT, keep_undetected_mask=False, bgr2rgb=True):
+    def _detect(self, img, refine_mode=REFINEMASK_INPAINT, keep_undetected_mask=False, bgr2rgb=True):
         img_in, ratio, dw, dh = preprocess_img(img, input_size=self.input_size, device=self.device, half=self.half, to_tensor=self.backend=='torch')
 
         im_h, im_w = img.shape[:2]
@@ -116,20 +126,3 @@ class TextDetector:
             mask_refined = refine_undetected_mask(img, mask, mask_refined, blk_list, refine_mode=refine_mode)
     
         return mask, mask_refined, blk_list
-
-DEFAULT_MODEL = None
-def load_model(cuda: bool):
-    global DEFAULT_MODEL
-    device = 'cuda' if cuda else 'cpu'
-    if cuda:
-        model = TextDetector(model_path='comictextdetector.pt', device=device, act='leaky')
-        model.net.cuda()
-    else:
-        model = TextDetector(model_path='comictextdetector.pt.onnx', device=device, act='leaky', input_size=1024)
-    DEFAULT_MODEL = model
-
-async def dispatch(img: np.ndarray, cuda: bool):
-    global DEFAULT_MODEL
-    if DEFAULT_MODEL is None :
-        load_model(cuda)
-    return DEFAULT_MODEL(img, refine_mode=REFINEMASK_INPAINT, keep_undetected_mask=False, bgr2rgb=False)

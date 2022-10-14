@@ -6,19 +6,18 @@ import cv2
 import numpy as np
 import requests
 import os
-from oscrypto import util as crypto_utils
-import asyncio
 import torch
-import huggingface_hub 
+import huggingface_hub
+from oscrypto import util as crypto_utils
 
-from detection import dispatch as dispatch_detection, load_model as load_detection_model
+from detection import DETECTORS, dispatch as dispatch_detection
 from ocr import dispatch as dispatch_ocr, load_model as load_ocr_model
 from inpainting import dispatch as dispatch_inpainting, load_model as load_inpainting_model
+from translators import TRANSLATORS, VALID_LANGUAGES, dispatch as run_translation
 from text_mask import dispatch as dispatch_mask_refinement
 from textline_merge import dispatch as dispatch_textline_merge
 from text_rendering import dispatch as dispatch_rendering, text_render
-from textblockdetector import dispatch as dispatch_ctd_detection
-from textblockdetector.textblock import visualize_textblocks
+from detection.textblockdetector.textblock import visualize_textblocks
 from utils import convert_img
 
 parser = argparse.ArgumentParser(description='Generate text bboxes given a image file')
@@ -40,9 +39,9 @@ parser.add_argument('--box-threshold', default=0.7, type=float, help='threshold 
 parser.add_argument('--text-threshold', default=0.5, type=float, help='threshold for text detection')
 parser.add_argument('--text-mag-ratio', default=1, type=int, help='text rendering magnification ratio, larger means higher quality')
 parser.add_argument('--font-size-offset', default=0, type=int, help='offset font size by a given amount, positive number increase font size and vice versa')
-parser.add_argument('--translator', default='google', type=str, help='language translator')
-parser.add_argument('--target-lang', default='CHS', type=str, help='destination language')
-parser.add_argument('--use-ctd', action='store_true', help='use comic-text-detector for text detection')
+parser.add_argument('--translator', default='google', type=str, choices=TRANSLATORS, help='language translator')
+parser.add_argument('--target-lang', default='CHS', type=str, choices=VALID_LANGUAGES, help='destination language')
+parser.add_argument('--detector', default='default', type=str, choices=DETECTORS, help='text detector used for creating a text mask from an image')
 parser.add_argument('--verbose', action='store_true', help='print debug info and save intermediate images')
 parser.add_argument('--manga2eng', action='store_true', help='render English text translated from manga with some typesetting')
 parser.add_argument('--eng-font', default='fonts/comic shanns 2.ttf', type=str, help='font used by manga2eng mode')
@@ -91,37 +90,37 @@ async def infer(
 		elif size_ind == 'X' :
 			img_detect_size = 2560
 	print(f' -- Detection resolution {img_detect_size}')
-	detector = 'ctd' if args.use_ctd else 'default'
+
 	if 'detector' in options :
 		detector = options['detector']
+	else:
+		detector = args.detector
 	print(f' -- Detector using {detector}')
+
 	render_text_direction_overwrite = 'h' if args.force_horizontal else ''
 	if 'direction' in options :
 		if options['direction'] == 'horizontal' :
 			render_text_direction_overwrite = 'h'
 	print(f' -- Render text direction is {render_text_direction_overwrite or "auto"}')
 
-	if mode == 'web' and task_id :
+	if mode == 'web' and task_id:
 		update_state(task_id, nonce, 'detection')
-	
-	if detector == 'ctd' :
-		mask, final_mask, textlines = await dispatch_ctd_detection(img, args.use_cuda)
+
+	raw_mask, final_mask, textlines = await dispatch_detection(detector, img, img_detect_size, args.use_cuda, args, verbose = args.verbose)
+	if detector == 'ctd':
 		text_regions = textlines
-	else:
-		textlines, mask = await dispatch_detection(img, img_detect_size, args.use_cuda, args, verbose = args.verbose)
 
 	if args.verbose :
 		if detector == 'ctd' :
 			bboxes = visualize_textblocks(cv2.cvtColor(img,cv2.COLOR_BGR2RGB), textlines)
 			cv2.imwrite(f'result/{task_id}/bboxes.png', bboxes)
-			cv2.imwrite(f'result/{task_id}/mask_raw.png', mask)
-			cv2.imwrite(f'result/{task_id}/mask_final.png', final_mask)
+			cv2.imwrite(f'result/{task_id}/mask_raw.png', raw_mask)
 		else:
 			img_bbox_raw = np.copy(img)
 			for txtln in textlines :
 				cv2.polylines(img_bbox_raw, [txtln.pts], True, color = (255, 0, 0), thickness = 2)
 			cv2.imwrite(f'result/{task_id}/bbox_unfiltered.png', cv2.cvtColor(img_bbox_raw, cv2.COLOR_RGB2BGR))
-			cv2.imwrite(f'result/{task_id}/mask_raw.png', mask)
+			cv2.imwrite(f'result/{task_id}/mask_raw.png', raw_mask)
 
 	if mode == 'web' and task_id :
 		update_state(task_id, nonce, 'ocr')
@@ -142,10 +141,9 @@ async def infer(
 		if mode == 'web' and task_id :
 			update_state(task_id, nonce, 'mask_generation')
 		# create mask
-		final_mask = await dispatch_mask_refinement(img, mask, textlines)
+		final_mask = await dispatch_mask_refinement(img, raw_mask, textlines)
 
 	if mode == 'web' and task_id :
-		print(' -- Translating')
 		update_state(task_id, nonce, 'translating')
 		# in web mode, we can start translation task async
 		if detector == 'ctd':
@@ -171,7 +169,6 @@ async def infer(
 	print(' -- Translating')
 	if mode != 'web' :
 		# try:
-		from translators import dispatch as run_translation
 		if detector == 'ctd' :
 			translated_sentences = await run_translation(args.translator, 'auto', args.target_lang, [r.get_text() for r in text_regions])
 		else:
@@ -280,9 +277,6 @@ async def main(mode = 'demo') :
 	with open('alphabet-all-v5.txt', 'r', encoding = 'utf-8') as fp :
 		dictionary = [s[:-1] for s in fp.readlines()]
 	load_ocr_model(dictionary, args.use_cuda, args.ocr_model)
-	from textblockdetector import load_model as load_ctd_model
-	load_ctd_model(args.use_cuda)
-	load_detection_model(args.use_cuda)
 	load_inpainting_model(args.use_cuda, args.inpainting_model)
 
 	if mode == 'demo' :
