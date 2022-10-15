@@ -11,15 +11,15 @@ from .common import CommonDetector
 class DefaultDetector(CommonDetector):
 	_MODEL_FILE = 'detect.ckpt'
 
-	def _load_model(self):
-		if not self.is_model_loaded():
+	def _load(self):
+		if not self.is_loaded():
 			model = TextDetectionDefault()
 			sd = torch.load(self._get_model_path(), map_location = 'cpu')
 			model.load_state_dict(sd['model'] if 'model' in sd else sd)
 			model.eval()
 			if self._use_cuda:
 				model = model.cuda()
-			self._model = model
+			self.model = model
 
 	async def detect(self, img: np.ndarray, detect_size: int, args: dict, verbose: bool) :
 		img_resized, target_ratio, _, pad_w, pad_h = imgproc.resize_aspect_ratio(cv2.bilateralFilter(img, 17, 80, 80), detect_size, cv2.INTER_LINEAR, mag_ratio = 1)
@@ -32,7 +32,7 @@ class DefaultDetector(CommonDetector):
 			img = img.cuda()
 		img = einops.rearrange(img, 'h w c -> 1 c h w')
 		with torch.no_grad():
-			db, mask = self._model(img)
+			db, mask = self.model(img)
 			db = db.sigmoid().cpu()
 			mask = mask[0, 0, :, :].cpu().numpy()
 		det = dbnet_utils.SegDetectorRepresenter(args.text_threshold, args.box_threshold, unclip_ratio = args.unclip_ratio)

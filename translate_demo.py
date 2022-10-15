@@ -109,16 +109,15 @@ async def infer(
 	raw_mask, final_mask, textlines = await dispatch_detection(detector, img, img_detect_size, args.use_cuda, args, verbose = args.verbose)
 
 	if args.verbose :
+		cv2.imwrite(f'result/{task_id}/mask_raw.png', raw_mask)
 		if detector == 'ctd' :
 			bboxes = visualize_textblocks(cv2.cvtColor(img,cv2.COLOR_BGR2RGB), textlines)
-			cv2.imwrite(f'result/{task_id}/bboxes.png', bboxes)
-			cv2.imwrite(f'result/{task_id}/mask_raw.png', raw_mask)
+			cv2.imwrite(f'result/{task_id}/bbox.png', bboxes)
 		else:
 			img_bbox_raw = np.copy(img)
 			for txtln in textlines :
 				cv2.polylines(img_bbox_raw, [txtln.pts], True, color = (255, 0, 0), thickness = 2)
 			cv2.imwrite(f'result/{task_id}/bbox_unfiltered.png', cv2.cvtColor(img_bbox_raw, cv2.COLOR_RGB2BGR))
-			cv2.imwrite(f'result/{task_id}/mask_raw.png', raw_mask)
 
 	if mode == 'web' and task_id :
 		update_state(task_id, nonce, 'ocr')
@@ -170,9 +169,9 @@ async def infer(
 	if mode != 'web' :
 		# try:
 		if detector == 'ctd' :
-			translated_sentences = await run_translation(args.translator, 'auto', args.target_lang, [r.get_text() for r in text_regions])
+			translated_sentences = await run_translation(args.translator, 'auto', args.target_lang, [r.get_text() for r in text_regions], args.use_cuda)
 		else:
-			translated_sentences = await run_translation(args.translator, 'auto', args.target_lang, [r.text for r in text_regions])
+			translated_sentences = await run_translation(args.translator, 'auto', args.target_lang, [r.text for r in text_regions], args.use_cuda)
 
 	else :
 		translation_request_timeout = 20

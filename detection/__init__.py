@@ -20,7 +20,7 @@ def get_detector(key: str, *args, **kwargs) -> CommonDetector:
 
 async def dispatch(detector_key: str, img: np.ndarray, detect_size: int, use_cuda: bool, args: dict, verbose: bool = False):
     detector = get_detector(detector_key, use_cuda)
-    if not detector.is_model_loaded():
-        detector.load_model()
+    if not detector.is_loaded():
+        detector.load()
 
     return await detector.detect(img, detect_size, args, verbose)

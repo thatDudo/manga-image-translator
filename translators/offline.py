@@ -5,6 +5,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 from langdetect import detect
 
 from translators.common import CommonTranslator
+from utils import ModelWrapper
 
 OFFLINE_TRANSLATOR_MODEL_MAP = {
     "offline": "facebook/nllb-200-distilled-600M",
@@ -53,24 +54,18 @@ ISO_639_1_TO_FLORES_200 = {
 	'tr': 'tur_Latn',
 }
 
-class OfflineTranslator(CommonTranslator):
-    def __init__(self):
+class OfflineTranslator(CommonTranslator, ModelWrapper):
+    def __init__(self, use_cuda):
+        super().__init__(use_cuda)
         self.model_name = None
-        self.loaded = False
         self.model = None
         self.tokenizer = None
 
-    def load(self, translator):
-        # Lazy load memory heavy models
-        if not self.loaded:
-            self.model_name = OFFLINE_TRANSLATOR_MODEL_MAP[translator]
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.loaded = True
+    def _load(self, translator):
+        self.model_name = OFFLINE_TRANSLATOR_MODEL_MAP[translator]
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-    def is_loaded(self):
-        return self.loaded
-    
     def _get_language_code(self, key):
         return LANGUAGE_CODE_MAP[key]
 
@@ -99,7 +94,7 @@ class OfflineTranslator(CommonTranslator):
             return ""
 
         translator = pipeline('translation', 
-            device=self._get_device(),
+            device=0 if self._use_cuda else -1,
             model=self.model,
             tokenizer=self.tokenizer,
             src_lang=from_lang,
@@ -117,9 +112,3 @@ class OfflineTranslator(CommonTranslator):
             return None
 
         return ISO_639_1_TO_FLORES_200[lang]
-    
-    @staticmethod
-    def _get_device():
-        # -1: CPU
-        # 0: CUDA DEVICE 0
-        return 0 if torch.cuda.is_available() and os.getenv('USE_CUDA_FOR_OFFLINE_TRANSLATION', False) else -1

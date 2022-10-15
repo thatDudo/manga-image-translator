@@ -49,7 +49,7 @@ def get_translator(key: str, *args, **kwargs) -> CommonTranslator:
 		translator_cache[key] = translator(*args, **kwargs)
 	return translator_cache[key]
 
-async def dispatch(translator_key: str, src_lang: str, tgt_lang: str, queries: List[str], *args, **kwargs) -> List[str] :
+async def dispatch(translator_key: str, src_lang: str, tgt_lang: str, queries: List[str], use_cuda=False) -> List[str] :
 	if translator_key == 'null' :
 		return queries
 	if not queries :
@@ -68,7 +68,7 @@ async def dispatch(translator_key: str, src_lang: str, tgt_lang: str, queries: L
 			print(f'Failed to initialize deepl :\n{str(e)}\nFallback to google translator')
 			translator = get_translator('google')
 	else:
-		translator = get_translator(translator_key)
+		translator = get_translator(translator_key, use_cuda)
 
 	if translator_key in ('offline', 'offline_big') :
 		if not translator.is_loaded() :

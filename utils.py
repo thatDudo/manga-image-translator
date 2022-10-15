@@ -14,6 +14,27 @@ except AttributeError: # Supports Python versions below 3.8
 	functools.cached_property = cached_property
 
 
+class ModelWrapper():
+	_MODEL_FILE = None
+
+	def __init__(self, use_cuda):
+		self._use_cuda = use_cuda
+		self._loaded = False
+
+	# Can be used in the future to specify a model directory
+	def _get_model_path(self):
+		return self._MODEL_FILE
+
+	def is_loaded(self):
+		return self._loaded
+
+	def load(self, *args, **kwargs):
+		if not self.is_loaded():
+			self._load(*args, **kwargs)
+			self._loaded = True
+
+	def _load(self, *args, **kwargs): ...
+
 class AvgMeter() :
 	def __init__(self) :
 		self.reset()
