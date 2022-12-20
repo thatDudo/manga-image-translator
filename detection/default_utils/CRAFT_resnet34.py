@@ -1,13 +1,10 @@
+import einops
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.nn.init as init
 
 from torchvision.models import resnet34
-
-import einops
-import math
 
 class ImageMultiheadSelfAttention(nn.Module):
 	def __init__(self, planes):

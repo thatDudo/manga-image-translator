@@ -20,11 +20,10 @@ def get_ocr(key: str, *args, **kwargs) -> CommonOCR:
 		ocr_cache[key] = ocr(*args, **kwargs)
 	return ocr_cache[key]
 
-async def prepare(ocr_key: str, use_cuda: bool):
+async def prepare(ocr_key: str):
 	ocr = get_ocr(ocr_key)
 	if isinstance(ocr, OfflineOCR):
 		await ocr.download()
-		await ocr.load('cuda' if use_cuda else 'cpu')
 
 async def dispatch(ocr_key: str, image: np.ndarray, textlines: List[Quadrilateral], use_cuda: bool = False, verbose: bool = False) -> List[Quadrilateral]:
 	ocr = get_ocr(ocr_key)

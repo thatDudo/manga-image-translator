@@ -7,7 +7,7 @@ import networkx as nx
 import itertools
 
 from utils import ModelWrapper, Quadrilateral, quadrilateral_can_merge_region
-from textblockdetector import TextBlock
+from detection.ctd_utils import TextBlock
 
 class CommonOCR(ABC):
     def generate_text_direction(self, bboxes: List[Quadrilateral]):

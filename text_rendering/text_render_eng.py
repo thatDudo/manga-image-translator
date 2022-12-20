@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
-from typing import List, Union, Tuple
+from typing import List, Tuple
 
-from textblockdetector import TextBlock
+from detection.ctd_utils import TextBlock
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -11,7 +11,6 @@ PUNSET_RIGHT_ENG = {'.', '?', '!', ':', ';', ')', '}', "\""}
 
 
 class Line:
-
 	def __init__(self, text: str = '', pos_x: int = 0, pos_y: int = 0, length: float = 0, spacing: int = 0) -> None:
 		self.text = text
 		self.pos_x = pos_x

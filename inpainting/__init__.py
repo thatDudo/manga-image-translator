@@ -20,11 +20,10 @@ def get_inpainter(key: str, *args, **kwargs) -> CommonInpainter:
 		inpainter_cache[key] = inpainter(*args, **kwargs)
 	return inpainter_cache[key]
 
-async def prepare(inpainter_key: str, use_cuda: bool):
+async def prepare(inpainter_key: str):
 	inpainter = get_inpainter(inpainter_key)
 	if isinstance(inpainter, OfflineInpainter):
 		await inpainter.download()
-		await inpainter.load('cuda' if use_cuda else 'cpu')
 
 async def dispatch(inpainter_key: str, image: np.ndarray, mask: np.ndarray, inpainting_size: int = 1024, verbose: bool = False, use_cuda: bool = False) -> np.ndarray:
 	inpainter = get_inpainter(inpainter_key)
