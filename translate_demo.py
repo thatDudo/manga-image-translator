@@ -187,12 +187,6 @@ async def infer(
 				img_bbox = cv2.polylines(img_bbox, [region.pts], True, color = (0, 0, 255), thickness = 2)
 			cv2.imwrite(f'result/{task_id}/bboxes.png', cv2.cvtColor(img_bbox, cv2.COLOR_RGB2BGR))
 
-		# print(' -- Generating text mask')
-		# if mode == 'web' and task_id:
-		# 	update_state(task_id, nonce, 'mask_generation')
-		# # create mask
-		# final_mask = await dispatch_mask_refinement(img_rgb, mask, textlines)
-
 	if mode == 'web' and task_id and options.get('translator') not in OFFLINE_TRANSLATORS:
 		update_state(task_id, nonce, 'translating')
 		# in web mode, we can start non offline translation tasks async
