@@ -1,6 +1,11 @@
 # from utils.yolov5_utils import scale_img
 from copy import deepcopy
+from pathlib import Path
+import torch
+import torch.nn as nn
+
 from .common import *
+from ..utils.yolov5_utils import make_divisible, initialize_weights, check_anchor_order, check_version, fuse_conv_and_bn
 
 class Detect(nn.Module):
     stride = None  # strides computed during build

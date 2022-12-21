@@ -137,7 +137,7 @@ def render(img_canvas, font_size, text_mag_ratio, trans_text, region, majority_d
 	r_prime = w / h
 
 	if is_ctd:
-		r = region.aspect_ratio()
+		r = region.aspect_ratio
 		if majority_dir != 'v':
 			r = 1 / r
 	else:

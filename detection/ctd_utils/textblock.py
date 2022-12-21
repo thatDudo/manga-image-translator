@@ -1,11 +1,12 @@
-from typing import List, Tuple
+import cv2
 import numpy as np
+from typing import List, Tuple
 from shapely.geometry import Polygon
 import math
 import copy
-from .utils.imgproc_utils import union_area, xywh2xyxypoly, rotate_polygons
+
 from utils import color_difference
-import cv2
+from .utils.imgproc_utils import union_area, xywh2xyxypoly, rotate_polygons
 
 LANG_LIST = ['eng', 'ja', 'unknown']
 LANGCLS2IDX = {'eng': 0, 'ja': 1, 'unknown': 2}
@@ -120,6 +121,7 @@ class TextBlock(object):
 	def lines_array(self, dtype=np.float64):
 		return np.array(self.lines, dtype=dtype)
 
+	@property
 	def aspect_ratio(self) -> float:
 		min_rect = self.min_rect()
 		middle_pnts = (min_rect[:, [1, 2, 3, 0]] + min_rect) / 2
@@ -225,15 +227,15 @@ class TextBlock(object):
 
 		return text.strip()
 
-	def set_font_colors(self, frgb, srgb, accumulate=True):
+	def set_font_colors(self, font_rgb, stroke_rgb, accumulate=True):
 		self.accumulate_color = accumulate
 		num_lines = len(self.lines) if accumulate and len(self.lines) > 0 else 1
 		# set font color
-		frgb = np.array(frgb) * num_lines
-		self.fg_r, self.fg_g, self.fg_b = frgb
+		font_rgb = np.array(font_rgb) * num_lines
+		self.fg_r, self.fg_g, self.fg_b = font_rgb
 		# set stroke color  
-		srgb = np.array(srgb) * num_lines
-		self.bg_r, self.bg_g, self.bg_b = srgb
+		stroke_rgb = np.array(stroke_rgb) * num_lines
+		self.bg_r, self.bg_g, self.bg_b = stroke_rgb
 
 	def get_font_colors(self, bgr=False):
 		num_lines = len(self.lines)
@@ -252,9 +254,10 @@ class TextBlock(object):
 		else:
 			return frgb, brgb
 
+	@property
 	def xywh(self):
-		x, y, w, h = self.xyxy
-		return [x, y, w-x, h-y]
+		x1, y1, x2, y2 = self.xyxy
+		return [x1, y1, x2-x1, y2-y1]
 
 	# alignleft: 0, center: 1, right: 2 
 	def alignment(self):
