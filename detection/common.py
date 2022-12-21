@@ -5,7 +5,7 @@ import os
 
 from utils import ModelWrapper
 # from textline_merge import dispatch as dispatch_textline_merge
-from .text_mask import dispatch as dispatch_mask_refinement
+from .textmask_refinement import dispatch as dispatch_mask_refinement
 from .ctd_utils import TextBlock
 
 class CommonDetector(ABC):
