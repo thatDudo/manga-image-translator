@@ -5,7 +5,7 @@ import os
 
 from utils import ModelWrapper
 # from textline_merge import dispatch as dispatch_textline_merge
-# from text_mask import dispatch as dispatch_mask_refinement
+from .text_mask import dispatch as dispatch_mask_refinement
 from .ctd_utils import TextBlock
 
 class CommonDetector(ABC):
@@ -13,8 +13,8 @@ class CommonDetector(ABC):
     # async def _merge_textlines(self, textlines: List[TextBlock], width: int, height: int) -> List[TextBlock]:
     #     return await dispatch_textline_merge(textlines, width, height)
 
-    # async def _refine_textmask(self, textlines: List[TextBlock], raw_image: np.ndarray, raw_mask: np.ndarray, method: str = 'fit_text') -> np.ndarray:
-    #     return await dispatch_mask_refinement(textlines, raw_image, raw_mask, method)
+    async def _refine_textmask(self, textlines: List[TextBlock], raw_image: np.ndarray, raw_mask: np.ndarray, method: str = 'fit_text') -> np.ndarray:
+        return await dispatch_mask_refinement(textlines, raw_image, raw_mask, method)
 
     async def detect(self, image: np.ndarray, detect_size: int, text_threshold: float, box_threshold: float, unclip_ratio: float, verbose: bool = False) -> tuple[list[TextBlock], np.ndarray]:
         '''

@@ -14,7 +14,6 @@ from detection import DETECTORS, dispatch as dispatch_detection, prepare as prep
 from ocr import OCRS, dispatch as dispatch_ocr, prepare as prepare_ocr
 from inpainting import INPAINTERS, dispatch as dispatch_inpainting, prepare as prepare_inpainting
 from translators import OFFLINE_TRANSLATORS, TRANSLATORS, VALID_LANGUAGES, dispatch as dispatch_translation, prepare as prepare_translation
-from text_mask import dispatch as dispatch_mask_refinement
 from textline_merge import dispatch as dispatch_textline_merge
 from upscaling import dispatch as dispatch_upscaling, prepare as prepare_upscaling
 from text_rendering import dispatch as dispatch_rendering, text_render
@@ -155,9 +154,10 @@ async def infer(
 	if detector == 'ctd':
 		mask, final_mask, textlines = await dispatch_ctd_detection(img_rgb, args.use_cuda)
 	else:
-		textlines, mask = await dispatch_detection(args.detector, img_rgb, img_detect_size, args.text_threshold, args.box_threshold, args.unclip_ratio, args.verbose, args.use_cuda)
+		textlines, mask, final_mask = await dispatch_detection(args.detector, img_rgb, img_detect_size, args.text_threshold, args.box_threshold, args.unclip_ratio, args.verbose, args.use_cuda)
 
 	if args.verbose:
+		cv2.imwrite(f'result/{task_id}/mask_final.png', final_mask)
 		if detector == 'ctd':
 			bboxes = visualize_textblocks(cv2.cvtColor(img_rgb,cv2.COLOR_BGR2RGB), textlines)
 			cv2.imwrite(f'result/{task_id}/bboxes.png', bboxes)
@@ -187,11 +187,11 @@ async def infer(
 				img_bbox = cv2.polylines(img_bbox, [region.pts], True, color = (0, 0, 255), thickness = 2)
 			cv2.imwrite(f'result/{task_id}/bboxes.png', cv2.cvtColor(img_bbox, cv2.COLOR_RGB2BGR))
 
-		print(' -- Generating text mask')
-		if mode == 'web' and task_id:
-			update_state(task_id, nonce, 'mask_generation')
-		# create mask
-		final_mask = await dispatch_mask_refinement(img_rgb, mask, textlines)
+		# print(' -- Generating text mask')
+		# if mode == 'web' and task_id:
+		# 	update_state(task_id, nonce, 'mask_generation')
+		# # create mask
+		# final_mask = await dispatch_mask_refinement(img_rgb, mask, textlines)
 
 	if mode == 'web' and task_id and options.get('translator') not in OFFLINE_TRANSLATORS:
 		update_state(task_id, nonce, 'translating')
@@ -211,7 +211,6 @@ async def infer(
 		img_inpainted = img_rgb
 
 	if args.verbose:
-		cv2.imwrite(f'result/{task_id}/mask_final.png', final_mask)
 		inpaint_input_img = await dispatch_inpainting('none', img_rgb, final_mask)
 		cv2.imwrite(f'result/{task_id}/inpaint_input.png', cv2.cvtColor(inpaint_input_img, cv2.COLOR_RGB2BGR))
 		cv2.imwrite(f'result/{task_id}/inpainted.png', cv2.cvtColor(img_inpainted, cv2.COLOR_RGB2BGR))
